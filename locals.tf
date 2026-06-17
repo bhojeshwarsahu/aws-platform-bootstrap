@@ -11,7 +11,7 @@ locals {
 
   terraform_state_bucket = "${local.name_prefix}-${local.account_id}-tf-state"
 
-  terraform_lock_table = "${local.name_prefix}-${local.account_id}-tf-lock"
+  terraform_lock_table = "${local.name_prefix}-tf-lock"
 
-  kms_alias = "alias/${local.name_prefix}-${local.account_id}-tf-state"
+  kms_alias = "alias/${local.name_prefix}-tf-state"
 }
