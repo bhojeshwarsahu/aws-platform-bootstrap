@@ -1,6 +1,7 @@
 locals {
-  name_prefix = "${var.project_name}-${var.environment}"
-  account_id  = data.aws_caller_identity.current.account_id
+  name_prefix       = "${var.project_name}-${var.environment}"
+  account_id        = data.aws_caller_identity.current.account_id
+  github_repository = "${var.github_owner}/aws-platform-bootstrap"
 
   common_tags = {
     Project     = var.project_name
