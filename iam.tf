@@ -32,7 +32,7 @@ data "aws_iam_policy_document" "github_bootstrap_plan_assume_role" {
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:${local.github_repository}:ref:refs/heads/*"
+        "repo:${local.github_repository}:*"
       ]
     }
   }
@@ -109,7 +109,7 @@ resource "aws_iam_role" "github_bootstrap" {
   )
 }
 
-resource "aws_iam_role_policy_attachment" "bootstrap_admin" {
+resource "aws_iam_role_policy_attachment" "administrator_access" {
   role       = aws_iam_role.github_bootstrap.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
@@ -148,7 +148,7 @@ data "aws_iam_policy_document" "github_infra_plan_assume_role" {
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:bhojeshwarsahu/aws-platform-infra:ref:refs/heads/*"
+        "repo:${local.github_infra_repository}:*"
       ]
     }
   }
@@ -206,7 +206,7 @@ data "aws_iam_policy_document" "github_infra_deploy_assume_role" {
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:bhojeshwarsahu/aws-platform-infra:ref:refs/heads/main"
+        "repo:${local.github_infra_repository}:ref:refs/heads/main"
       ]
     }
   }
