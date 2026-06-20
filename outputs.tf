@@ -8,3 +8,7 @@ output "github_oidc_provider_arn" {
 output "github_bootstrap_role_arn" {
   value = aws_iam_role.github_bootstrap.arn
 }
+
+output "github_infra_role_arn" {
+  value = aws_iam_role.github_infra.arn
+}
