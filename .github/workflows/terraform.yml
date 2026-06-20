@@ -4,10 +4,15 @@ on:
   push:
     branches:
       - main
+  pull_request:
 
 permissions:
   id-token: write
   contents: read
+
+concurrency:
+  group: terraform-bootstrap
+  cancel-in-progress: false
 
 jobs:
   terraform:
@@ -29,11 +34,14 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -input=false
 
       - name: Terraform Validate
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -var-file=prod.tfvars
+        run: terraform plan -input=false -var-file=prod.tfvars
