@@ -1,4 +1,8 @@
-data "aws_iam_policy_document" "github_oidc_assume_role" {
+#############################################
+# BOOTSTRAP PLAN ROLE
+#############################################
+
+data "aws_iam_policy_document" "github_bootstrap_plan_assume_role" {
   statement {
     effect = "Allow"
 
@@ -8,6 +12,7 @@ data "aws_iam_policy_document" "github_oidc_assume_role" {
 
     principals {
       type = "Federated"
+
       identifiers = [
         aws_iam_openid_connect_provider.github.arn
       ]
@@ -16,6 +21,65 @@ data "aws_iam_policy_document" "github_oidc_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:aud"
+
+      values = [
+        "sts.amazonaws.com"
+      ]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+
+      values = [
+        "repo:${local.github_repository}:ref:refs/heads/*"
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_bootstrap_plan" {
+  name = "${local.name_prefix}-github-bootstrap-plan-role"
+
+  assume_role_policy = data.aws_iam_policy_document.github_bootstrap_plan_assume_role.json
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.name_prefix}-github-bootstrap-plan-role"
+    }
+  )
+}
+
+resource "aws_iam_role_policy_attachment" "bootstrap_plan_readonly" {
+  role       = aws_iam_role.github_bootstrap_plan.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
+
+#############################################
+# BOOTSTRAP DEPLOY ROLE
+#############################################
+
+data "aws_iam_policy_document" "github_bootstrap_deploy_assume_role" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "sts:AssumeRoleWithWebIdentity"
+    ]
+
+    principals {
+      type = "Federated"
+
+      identifiers = [
+        aws_iam_openid_connect_provider.github.arn
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+
       values = [
         "sts.amazonaws.com"
       ]
@@ -24,6 +88,7 @@ data "aws_iam_policy_document" "github_oidc_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
+
       values = [
         "repo:${local.github_repository}:ref:refs/heads/main"
       ]
@@ -34,7 +99,7 @@ data "aws_iam_policy_document" "github_oidc_assume_role" {
 resource "aws_iam_role" "github_bootstrap" {
   name = "${local.name_prefix}-github-bootstrap-role"
 
-  assume_role_policy = data.aws_iam_policy_document.github_oidc_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.github_bootstrap_deploy_assume_role.json
 
   tags = merge(
     local.common_tags,
@@ -44,12 +109,74 @@ resource "aws_iam_role" "github_bootstrap" {
   )
 }
 
-resource "aws_iam_role_policy_attachment" "administrator_access" {
+resource "aws_iam_role_policy_attachment" "bootstrap_admin" {
   role       = aws_iam_role.github_bootstrap.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
-data "aws_iam_policy_document" "github_infra_assume_role" {
+#############################################
+# INFRA PLAN ROLE
+#############################################
+
+data "aws_iam_policy_document" "github_infra_plan_assume_role" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "sts:AssumeRoleWithWebIdentity"
+    ]
+
+    principals {
+      type = "Federated"
+
+      identifiers = [
+        aws_iam_openid_connect_provider.github.arn
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+
+      values = [
+        "sts.amazonaws.com"
+      ]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+
+      values = [
+        "repo:bhojeshwarsahu/aws-platform-infra:ref:refs/heads/*"
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_infra_plan" {
+  name = "${local.name_prefix}-github-infra-plan-role"
+
+  assume_role_policy = data.aws_iam_policy_document.github_infra_plan_assume_role.json
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.name_prefix}-github-infra-plan-role"
+    }
+  )
+}
+
+resource "aws_iam_role_policy_attachment" "infra_plan_readonly" {
+  role       = aws_iam_role.github_infra_plan.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
+
+#############################################
+# INFRA DEPLOY ROLE
+#############################################
+
+data "aws_iam_policy_document" "github_infra_deploy_assume_role" {
   statement {
     effect = "Allow"
 
@@ -88,7 +215,7 @@ data "aws_iam_policy_document" "github_infra_assume_role" {
 resource "aws_iam_role" "github_infra" {
   name = "${local.name_prefix}-github-infra-role"
 
-  assume_role_policy = data.aws_iam_policy_document.github_infra_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.github_infra_deploy_assume_role.json
 
   tags = merge(
     local.common_tags,
@@ -98,7 +225,7 @@ resource "aws_iam_role" "github_infra" {
   )
 }
 
-resource "aws_iam_role_policy_attachment" "infra_administrator_access" {
+resource "aws_iam_role_policy_attachment" "infra_admin" {
   role       = aws_iam_role.github_infra.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
