@@ -18,7 +18,7 @@ This repository solves the initial bootstrap problem by creating the foundationa
 ### Terraform Remote State
 
 * Amazon S3 Bucket for Terraform state storage
-* DynamoDB Table for state locking
+* Native S3 state locking (`use_lockfile`) — no DynamoDB table required
 * Server-side encryption using AWS KMS
 
 ### Identity & Access Management
@@ -40,8 +40,7 @@ GitHub Actions → AWS OIDC → IAM Role → Terraform → AWS Resources
 ## Resources Managed
 
 * AWS KMS Key
-* S3 Backend Bucket
-* DynamoDB Lock Table
+* S3 Backend Bucket (with native S3 state locking)
 * GitHub OIDC Provider
 * GitHub Actions IAM Roles
 * IAM Policies and Trust Relationships
@@ -52,7 +51,6 @@ GitHub Actions → AWS OIDC → IAM Role → Terraform → AWS Resources
 aws-platform-bootstrap/
 ├── kms.tf
 ├── s3.tf
-├── dynamodb.tf
 ├── oidc.tf
 ├── iam.tf
 ├── outputs.tf
@@ -62,14 +60,13 @@ aws-platform-bootstrap/
 
 ## Deployment Strategy
 
-This repository is executed only during the initial platform setup.
+This repository has exactly one manual step: the very first `terraform apply`, run locally with privileged AWS credentials, before the S3 backend, OIDC provider, and GitHub Actions IAM roles exist. There is no way around this — GitHub Actions cannot assume a role that doesn't exist yet, and Terraform cannot write to a remote backend that doesn't exist yet.
 
-After the bootstrap process is complete:
+Immediately after that first apply:
 
-* Terraform state is stored remotely in S3.
-* State locking is handled by DynamoDB.
-* GitHub Actions authenticates to AWS using OIDC.
-* All future infrastructure changes are managed through dedicated platform repositories.
+* State is migrated to the S3 backend (`terraform init -migrate-state`), with locking handled natively by S3 (`use_lockfile`) — no DynamoDB table involved.
+* Every subsequent change to *this* repository is planned and applied exclusively by GitHub Actions via OIDC (see `.github/workflows/terraform.yml`) — no further local/manual `terraform apply` should ever be run against this state.
+* All future infrastructure changes (VPC, EKS, RDS, etc.) are managed through dedicated platform repositories (e.g. `aws-platform-infra`), which assume the `github_infra`/`github_infra_plan` roles this repository creates.
 
 ## Design Principles
 
@@ -101,6 +98,3 @@ These resources are managed in the platform infrastructure repository after boot
 * aws-platform-infra
 * aws-platform-gitops
 * aws-platform-apps
-
-```
-```

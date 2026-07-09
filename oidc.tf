@@ -1,3 +1,7 @@
+data "tls_certificate" "github" {
+  url = "https://token.actions.githubusercontent.com"
+}
+
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
 
@@ -6,7 +10,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   ]
 
   thumbprint_list = [
-    "ffffffffffffffffffffffffffffffffffffffff"
+    data.tls_certificate.github.certificates[0].sha1_fingerprint
   ]
 
   tags = merge(
