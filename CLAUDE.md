@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Terraform that bootstraps the AWS account itself, before any other IaC or CI/CD pipeline can run. It creates:
 
-- The S3 bucket + DynamoDB lock table + KMS key that Terraform state (including this repo's own state) is stored in ([s3.tf](s3.tf), [dynamodb.tf](dynamodb.tf), [kms.tf](kms.tf))
+- The S3 bucket + KMS key that Terraform state (including this repo's own state) is stored in, with native S3 locking ([s3.tf](s3.tf), [kms.tf](kms.tf))
 - A GitHub Actions OIDC provider ([oidc.tf](oidc.tf))
 - IAM roles that GitHub Actions assumes via OIDC to run Terraform, in this repo and in the downstream `aws-platform-infra` repo ([iam.tf](iam.tf))
 
@@ -20,7 +20,7 @@ Sibling repos referenced by this one (not present locally): `aws-platform-infra`
 terraform init -input=false
 terraform fmt -check -recursive
 terraform validate
-terraform plan  -input=false -var-file=prod.tfvars
+terraform plan  -input=false -lock=false -var-file=prod.tfvars   # -lock=false: plan role can't write the S3 lockfile, see State locking
 terraform apply -input=false -auto-approve -var-file=prod.tfvars   # CI only, main branch
 ```
 
@@ -53,6 +53,8 @@ Pattern to follow for any new consumer repo: a `*_plan` role scoped to `repo:...
 ## State locking
 
 State locking is native S3 locking (`use_lockfile = true` in [backend.tf](backend.tf), requires Terraform 1.10+) — there is no DynamoDB lock table. Don't add one; it would be dead infrastructure.
+
+Acquiring this lock requires `s3:PutObject`/`DeleteObject` on the state bucket, which the `github_bootstrap_plan` role (pure `ReadOnlyAccess`) doesn't have — so the `terraform-plan` CI job runs with `-lock=false`. This is intentional, not an oversight: it keeps the plan role genuinely read-only, and is safe because the workflow's `concurrency: group: terraform-bootstrap` already serializes plan/apply runs at the GitHub Actions level. Only the `terraform-apply` step (using the admin `github_bootstrap` role) takes a real lock.
 
 ## OIDC thumbprint
 
